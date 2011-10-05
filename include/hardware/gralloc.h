@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- *
+ * Copyright (C) 2011 Accenture Ltd
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -176,6 +176,8 @@ typedef struct gralloc_module_t {
     int (*unlock)(struct gralloc_module_t const* module,
             buffer_handle_t handle);
 
+	int (*gles2emulator_getPhysAddr)(struct gralloc_module_t const* module,
+		buffer_handle_t handle,void** surfacePhysAddr);
 
     /* reserved for future use */
     int (*perform)(struct gralloc_module_t const* module,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- *
+ * Copyright (C) 2011 Accenture Ltd
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,6 +32,11 @@
 
 #include "gralloc_priv.h"
 
+#include "gles2_emulator_constants.h"
+
+#include <asm/io.h>
+#include <asm/memory.h>
+
 
 /* desktop Linux needs a little help with gettid() */
 #if defined(ARCH_X86) && !defined(HAVE_ANDROID_OS)
@@ -50,15 +55,27 @@ static int gralloc_map(gralloc_module_t const* module,
     private_handle_t* hnd = (private_handle_t*)handle;
     if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
         size_t size = hnd->size;
-        void* mappedAddress = mmap(0, size,
+
+	LOGV("Gralloc: Requesting mapping of size= %d \n", size);
+        
+	void* mappedAddress = mmap(0, size,
                 PROT_READ|PROT_WRITE, MAP_SHARED, hnd->fd, 0);
+
+	
         if (mappedAddress == MAP_FAILED) {
-            LOGE("Could not mmap %s", strerror(errno));
-            return -errno;
+
+	     LOGE("Gralloc: Could not mmap %s", strerror(errno));
+	            	return -errno;
+		
         }
-        hnd->base = intptr_t(mappedAddress) + hnd->offset;
-        //LOGD("gralloc_map() succeeded fd=%d, off=%d, size=%d, vaddr=%p",
-        //        hnd->fd, hnd->offset, hnd->size, mappedAddress);
+	else{
+	        hnd->base = intptr_t(mappedAddress) + hnd->offset;
+	}
+
+        LOGV("Gralloc: gralloc_map() succeeded fd=%d, off=%d, size=%d, vaddr=%p ",
+                hnd->fd, hnd->offset, hnd->size, hnd->base);
+
+
     }
     *vaddr = (void*)hnd->base;
     return 0;
@@ -71,9 +88,9 @@ static int gralloc_unmap(gralloc_module_t const* module,
     if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
         void* base = (void*)hnd->base;
         size_t size = hnd->size;
-        //LOGD("unmapping from %p, size=%d", base, size);
+        LOGV("Gralloc: unmapping from %p, size=%d", base, size);
         if (munmap(base, size) < 0) {
-            LOGE("Could not unmap %s", strerror(errno));
+            LOGE("Gralloc: Could not unmap %s", strerror(errno));
         }
     }
     hnd->base = 0;
@@ -167,3 +184,38 @@ int gralloc_unlock(gralloc_module_t const* module,
         return -EINVAL;
     return 0;
 }
+
+int gles2emulator_get_physicalSurfaceAddr(gralloc_module_t const* module,
+        private_handle_t* hnd)
+{
+        int physicalAddress = 0;
+     LOGV("Gralloc: device FD %x addr %x\n ",hnd->fd,&paddr);
+
+     if(physicalAddress = ioctl (hnd->fd, VIRTUALDEVICE_IOCTL_REGION_PHYSICAL_ADDR_START, 0))
+      {
+       hnd->gles2emulator_surfacePhysAddr = physicalAddress;
+       LOGV("Gralloc: Get phy addr from virtual device %x ",hnd->gles2emulator_surfacePhysAddr);
+
+      }
+     else
+      {
+       LOGE("Selva:: Get phy addr from virtual driver failed ");
+       return -errno;
+      }
+
+      return 0;
+     
+}
+
+int gralloc_gles2emulator_getPhysAddr(gralloc_module_t const* module,
+        buffer_handle_t handle,void** surfacePhysAddr)
+{
+if (private_handle_t::validate(handle) < 0)
+        return -EINVAL;
+
+    private_handle_t* hnd = (private_handle_t*)handle;
+    *surfacePhysAddr =(void*) hnd->gles2emulator_surfacePhysAddr;
+     LOGV("Gralloc: get phy addr %x virt %x addr %x",*surfacePhysAddr,hnd->base,hnd->gles2emulator_surfacePhysAddr);
+     return 0;
+}
+

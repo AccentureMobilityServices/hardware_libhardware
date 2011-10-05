@@ -1,5 +1,5 @@
 # Copyright (C) 2008 The Android Open Source Project
-#
+# Copyright (C) 2011 Accenture Ltd
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,6 +27,7 @@ LOCAL_SRC_FILES := 	\
 	framebuffer.cpp \
 	mapper.cpp
 	
+LOCAL_C_INCLUDES += vendor/accenture/opengles2emulator/include
 LOCAL_MODULE := gralloc.default
 LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc\"
 ifeq ($(BOARD_NO_PAGE_FLIPPING),true)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- *
+ * Copyright (C) 2011 Accenture Ltd
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,8 +34,10 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
+
 #include "gralloc_priv.h"
 #include "gr.h"
+
 
 /*****************************************************************************/
 
@@ -69,6 +71,9 @@ extern int gralloc_register_buffer(gralloc_module_t const* module,
 extern int gralloc_unregister_buffer(gralloc_module_t const* module,
         buffer_handle_t handle);
 
+extern int gralloc_gles2emulator_getPhysAddr(gralloc_module_t const* module,
+        buffer_handle_t handle,void** surfacePhysAddr);
+
 /*****************************************************************************/
 
 static struct hw_module_methods_t gralloc_module_methods = {
@@ -90,6 +95,7 @@ struct private_module_t HAL_MODULE_INFO_SYM = {
         unregisterBuffer: gralloc_unregister_buffer,
         lock: gralloc_lock,
         unlock: gralloc_unlock,
+		gles2emulator_getPhysAddr: gralloc_gles2emulator_getPhysAddr,
     },
     framebuffer: 0,
     flags: 0,
@@ -170,20 +176,56 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
 {
     int err = 0;
     int fd = -1;
+    bool virtdevice = 0;
 
     size = roundUpToPageSize(size);
-    
-    fd = ashmem_create_region("gralloc-buffer", size);
-    if (fd < 0) {
-        LOGE("couldn't create ashmem (%s)", strerror(-errno));
-        err = -errno;
-    }
+
+    /* Gralloc implementation attempts to allocate memory from virtual device if it is loaded
+       otherwise ashmem is used as standard */
+
+    char const * const virtual_device="/dev/virtual_device_control";
+    LOGV("Gralloc: Requesting allocation of size= %d \n", size);
+
+    fd=open(virtual_device,O_RDWR);   
+    LOGV("Gralloc: Virtual device fd =%d ", fd);
+
+    if(fd > -1 )
+    {
+
+    virtdevice = 1;
+
+     }
+    else
+    {
+	  LOGV("Gralloc: couldn't create virtualdevicee (%s)", strerror(-errno));
+
+	  //Could create virtual device (not loaded) so use Ashmem
+	  fd = ashmem_create_region("gralloc-buffer", size);
+
+	  LOGV("Gralloc: ASHMEEM fd=%d ", fd);
+
+	   if (fd < 0) 
+	   {
+		LOGE("Gralloc: couldn't create ashmem (%s)", strerror(-errno));
+		err=-errno;
+	   }
+	else{
+		err=0;
+	    }   
+      }
+
 
     if (err == 0) {
         private_handle_t* hnd = new private_handle_t(fd, size, 0);
         gralloc_module_t* module = reinterpret_cast<gralloc_module_t*>(
                 dev->common.module);
         err = mapBuffer(module, hnd);
+       if(virtdevice==1){
+         hnd->gles2emulator_surfacePhysAddr=0;
+         err=  gles2emulator_get_physicalSurfaceAddr(module,hnd);
+         LOGD("Selva:: GrallocHAL Buffer HND pid %d virtual addr %x phy addr %x ", hnd->pid,hnd->base,hnd->gles2emulator_surfacePhysAddr);
+         virtdevice=0;
+	}
         if (err == 0) {
             *pHandle = hnd;
         }

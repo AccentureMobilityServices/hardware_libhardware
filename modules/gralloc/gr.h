@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- *
+ * Copyright (C) 2011 Accenture Ltd
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,6 +43,7 @@ inline size_t roundUpToPageSize(size_t x) {
 int mapFrameBufferLocked(struct private_module_t* module);
 int terminateBuffer(gralloc_module_t const* module, private_handle_t* hnd);
 int mapBuffer(gralloc_module_t const* module, private_handle_t* hnd);
+int gles2emulator_get_physicalSurfaceAddr(gralloc_module_t const* module,private_handle_t* hnd);
 
 /*****************************************************************************/
 

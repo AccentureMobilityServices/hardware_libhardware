@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- *
+ * Copyright (C) 2011 Accenture Ltd
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -74,6 +74,7 @@ struct private_handle_t {
     int     size;
     int     offset;
 
+	int		gles2emulator_surfacePhysAddr;
     // FIXME: the attributes below should be out-of-line
     int     base;
     int     pid;
@@ -85,7 +86,7 @@ struct private_handle_t {
 
     private_handle_t(int fd, int size, int flags) :
         fd(fd), magic(sMagic), flags(flags), size(size), offset(0),
-        base(0), pid(getpid())
+        base(0), pid(getpid()),gles2emulator_surfacePhysAddr(0)
     {
         version = sizeof(native_handle);
         numInts = sNumInts;
